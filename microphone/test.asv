@@ -1,0 +1,48 @@
+% 创建一个audioDeviceReader对象
+deviceReader = audioDeviceReader;
+
+% 获取可用的音频输入设备并选择一个
+devices = getAudioDevices(deviceReader);
+% 假设已经选择了一个8通道的设备，确保索引正确
+selectedDevice = devices(3); 
+deviceReader.Device = char(selectedDevice);
+% 设置SamplesPerFrame和SampleRate，根据实际情况调整
+deviceReader.SamplesPerFrame = 1024;
+deviceReader.SampleRate = 48000;
+deviceReader.NumChannels = 8;
+
+% 准备实时绘图
+figure;
+subplot(2, 1, 1); % 第一个子图显示时间域波形
+waveformPlot = plot(0, 'LineWidth', 1);
+title('Time Domain');
+xlabel('Sample');
+ylabel('Amplitude');
+
+subplot(2, 1, 2); % 第二个子图显示频域波形（频谱图）
+spectrumPlot = plot(0, 'LineWidth', 1);
+title('Frequency Domain');
+xlabel('Frequency (Hz)');
+
+ylabel('Magnitude (dB)');
+xlim([0, deviceReader.SampleRate/2]); % 显示0到Nyquist频率的部分
+
+% 循环读取和绘制数据
+while true
+    audioData = deviceReader(); % 读取音频数据
+
+    % 更新时间域波形
+    set(waveformPlot, 'YData', audioData(:, 1));
+    set(waveformPlot, 'XData', 1:length(audioData(:, 1)));
+
+    % 执行FFT并更新频谱图
+    fftData = fft(audioData(:, 1));
+    N = length(fftData); % 数据点数
+    f = deviceReader.SampleRate * (0:(N/2))/N; % 频率向量
+    P = abs(fftData/N); % 幅值归一化
+    set(spectrumPlot, 'YData', 20*log10(P(1:N/2+1))); % 使用dB尺度
+    set(spectrumPlot, 'XData', f);
+
+    drawnow; % 立即更新图形窗口
+end
+
